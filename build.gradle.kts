@@ -76,3 +76,5 @@ tasks.jar {
 
     from(embedConfiguration.map { if (it.isDirectory) it else zipTree(it) })
 }
+
+
