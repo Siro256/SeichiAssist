@@ -4,16 +4,12 @@ import com.github.unchama.seasonalevents.events.valentine.Valentine;
 import com.github.unchama.seichiassist.ActiveSkillEffect;
 import com.github.unchama.seichiassist.ActiveSkillPremiumEffect;
 import com.github.unchama.seichiassist.SeichiAssist;
-import com.github.unchama.seichiassist.Skulls;
 import com.github.unchama.seichiassist.database.DatabaseGateway;
 import com.github.unchama.seichiassist.minestack.HistoryData;
 import com.github.unchama.seichiassist.minestack.MineStackObj;
 import com.github.unchama.seichiassist.task.GiganticBerserkTaskRunnable;
 import com.github.unchama.seichiassist.task.VotingFairyTaskRunnable;
-import com.github.unchama.seichiassist.util.ExperienceManager;
-import com.github.unchama.seichiassist.util.ExternalPlugins;
-import com.github.unchama.seichiassist.util.TypeConverter;
-import com.github.unchama.seichiassist.util.Util;
+import com.github.unchama.seichiassist.util.*;
 import com.github.unchama.util.collection.ImmutableListFactory;
 import com.sk89q.worldguard.bukkit.WorldConfiguration;
 import com.sk89q.worldguard.bukkit.WorldGuardPlugin;
@@ -30,12 +26,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Calendar;
-import java.util.HashMap;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 public class MenuInventoryData {
 	private static HashMap<UUID, PlayerData> playermap = SeichiAssist.playermap;
@@ -123,7 +114,7 @@ public class MenuInventoryData {
 		skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(playerdata.uuid));
 		//ExpBarトグル追加
 		itemstack.setItemMeta(dispExpBarToggleMeta(playerdata,skullmeta));
-		inventory.setItem(0,itemstack);
+		AsyncInventorySetter.setItemAsync(inventory,0,itemstack.clone());
 
 		//採掘速度上昇効果のトグルボタン
 		itemstack = new ItemStack(Material.DIAMOND_PICKAXE,1);
@@ -215,9 +206,9 @@ public class MenuInventoryData {
 		skullmeta.setDisplayName(ChatColor.YELLOW + "" + ChatColor.UNDERLINE + "" + ChatColor.BOLD + "2ページ目へ");
 		lore = ImmutableListFactory.of(ChatColor.RESET + "" + ChatColor.DARK_RED + "" + ChatColor.UNDERLINE + "クリックで移動");
 		skullmeta.setLore(lore);
-		skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.ARROW_RIGHT.getUuid()));
+		skullmeta.setOwner("MHF_ArrowRight");
 		itemstack.setItemMeta(skullmeta);
-		inventory.setItem(35,itemstack);
+		AsyncInventorySetter.setItemAsync(inventory,35,itemstack.clone());
 
 		// 整地神番付を開く
 		itemstack = new ItemStack(Material.COOKIE,1);
@@ -280,10 +271,9 @@ public class MenuInventoryData {
 		itemstack.setDurability((short) 3);
 		skullmeta.setDisplayName(ChatColor.DARK_AQUA + "" + ChatColor.UNDERLINE + "" + ChatColor.BOLD + "運営からのガチャ券を受け取る");
 		skullmeta.setLore(SorryGachaGetButtonLore(playerdata));
-		// whitecat_haru
-		skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(UUID.fromString("394f76df-883d-4855-9e6a-d1a800c1ab1c")));
+		skullmeta.setOwner("whitecat_haru");
 		itemstack.setItemMeta(skullmeta);
-		inventory.setItem(29,itemstack);
+		AsyncInventorySetter.setItemAsync(inventory,29,itemstack.clone());
 
 		// 不要ガチャ景品交換システムを開く
 		itemstack = new ItemStack(Material.NOTE_BLOCK,1);
@@ -416,9 +406,9 @@ public class MenuInventoryData {
 		skullmeta = (SkullMeta) Bukkit.getItemFactory().getItemMeta(Material.SKULL_ITEM);
 		skullmeta.setDisplayName(ChatColor.DARK_AQUA + "" + ChatColor.UNDERLINE + "" + ChatColor.BOLD + "整地報酬ガチャ券を受け取る");
 		skullmeta.setLore(GachaGetButtonLore(playerdata));
-		skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.UNCHAMA.getUuid()));
+		skullmeta.setOwner("unchama");
 		itemstack.setItemMeta(skullmeta);
-		inventory.setItem(27,itemstack);
+		AsyncInventorySetter.setItemAsync(inventory,27,itemstack.clone());
 
 		//ガチャ券受け取り方法選択ボタン
 		itemstack = new ItemStack(Material.STONE_BUTTON,1);
@@ -534,9 +524,9 @@ public class MenuInventoryData {
 			lore.add(ChatColor.RESET + "" +  ChatColor.DARK_RED + "" + ChatColor.UNDERLINE + "経験値が足りません");
 		}
 		skullmeta.setLore(lore);
-		skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.VILLAGER.getUuid()));
+		skullmeta.setOwner("MHF_Villager");
 		itemstack.setItemMeta(skullmeta);
-		inventory.setItem(12,itemstack);
+		AsyncInventorySetter.setItemAsync(inventory,12,itemstack.clone());
 
 		//全体通知のトグルボタン
 		itemstack = new ItemStack(Material.JUKEBOX,1);
@@ -584,9 +574,9 @@ public class MenuInventoryData {
 		skullmeta.setDisplayName(ChatColor.YELLOW + "" + ChatColor.UNDERLINE + "" + ChatColor.BOLD + "1ページ目へ");
 		lore = ImmutableListFactory.of(ChatColor.RESET + "" +  ChatColor.DARK_RED + "" + ChatColor.UNDERLINE + "クリックで移動");
 		skullmeta.setLore(lore);
-		skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.ARROW_LEFT.getUuid()));
+		skullmeta.setOwner("MHF_ArrowLeft");
 		itemstack.setItemMeta(skullmeta);
-		inventory.setItem(27,itemstack);
+		AsyncInventorySetter.setItemAsync(inventory,27,itemstack.clone());
 
 		// ver0.3.2 wikiページ表示
 		itemstack = new ItemStack(Material.BOOK,1);
@@ -731,9 +721,9 @@ public class MenuInventoryData {
 		skullmeta.setDisplayName(ChatColor.YELLOW + "" + ChatColor.UNDERLINE + "" + ChatColor.BOLD + "ホームへ");
 		lore = ImmutableListFactory.of(ChatColor.RESET + "" + ChatColor.DARK_RED + "" + ChatColor.UNDERLINE + "クリックで移動");
 		skullmeta.setLore(lore);
-		skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.ARROW_LEFT.getUuid()));
+		skullmeta.setOwner("MHF_ArrowLeft");
 		itemstack.setItemMeta(skullmeta);
-		inventory.setItem(27,itemstack);
+		AsyncInventorySetter.setItemAsync(inventory,27,itemstack.clone());
 
 		//複数種類同時破壊スキルのトグルボタン
 		itemstack = new ItemStack(Material.DIAMOND_PICKAXE,1);
@@ -971,9 +961,9 @@ public class MenuInventoryData {
 		lore.clear();
 		lore.add(ChatColor.RESET + "" +  ChatColor.DARK_RED + "" + ChatColor.UNDERLINE + "クリックで移動");
 		skullmeta.setLore(lore);
-		skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.ARROW_LEFT.getUuid()));
+		skullmeta.setOwner("MHF_ArrowLeft");
 		itemstack.setItemMeta(skullmeta);
-		inventory.setItem(45,itemstack);
+		AsyncInventorySetter.setItemAsync(inventory,45,itemstack.clone());
 
 		List<HistoryData> history = pd.hisotryData.getHistoryList();
 		int slot = 18;
@@ -1111,9 +1101,9 @@ public class MenuInventoryData {
 			skullmeta.setDisplayName(ChatColor.YELLOW + "" + ChatColor.UNDERLINE + "" + ChatColor.BOLD + "MineStackメインメニューへ");
 			List<String> lore = ImmutableListFactory.of(ChatColor.RESET + "" +  ChatColor.DARK_RED + "" + ChatColor.UNDERLINE + "クリックで移動");
 			skullmeta.setLore(lore);
-			skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.ARROW_LEFT.getUuid()));
+			skullmeta.setOwner("MHF_ArrowLeft");
 			itemstack.setItemMeta(skullmeta);
-			inventory.setItem(45,itemstack);
+			AsyncInventorySetter.setItemAsync(inventory,45,itemstack.clone());
 		} else if(page>=1){
 			// MineStackの前のページを開く
 			itemstack = new ItemStack(Material.SKULL_ITEM,1);
@@ -1122,9 +1112,9 @@ public class MenuInventoryData {
 			skullmeta.setDisplayName(ChatColor.YELLOW + "" + ChatColor.UNDERLINE + "" + ChatColor.BOLD + "MineStack" + page + "ページ目へ");
 			List<String> lore = ImmutableListFactory.of(ChatColor.RESET + "" +  ChatColor.DARK_RED + "" + ChatColor.UNDERLINE + "クリックで移動");
 			skullmeta.setLore(lore);
-			skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.ARROW_UP.getUuid()));
+			skullmeta.setOwner("MHF_ArrowUp");
 			itemstack.setItemMeta(skullmeta);
-			inventory.setItem(45,itemstack);
+			AsyncInventorySetter.setItemAsync(inventory,45,itemstack.clone());
 		}
 
 		if(maxpage>=1 && page!=maxpage){ //3ページ以降があって現在は最大ページ目でない
@@ -1135,9 +1125,9 @@ public class MenuInventoryData {
 			skullmeta.setDisplayName(ChatColor.YELLOW + "" + ChatColor.UNDERLINE + "" + ChatColor.BOLD + "MineStack" + (page+2) + "ページ目へ");
 			List<String> lore = ImmutableListFactory.of(ChatColor.RESET + "" +  ChatColor.DARK_RED + "" + ChatColor.UNDERLINE + "クリックで移動");
 			skullmeta.setLore(lore);
-			skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.ARROW_DOWN.getUuid()));
+			skullmeta.setOwner("MHF_ArrowDown");
 			itemstack.setItemMeta(skullmeta);
-			inventory.setItem(53,itemstack);
+			AsyncInventorySetter.setItemAsync(inventory,53,itemstack.clone());
 		}
 
 		return inventory;
@@ -1464,9 +1454,9 @@ public class MenuInventoryData {
 			lore.add(ChatColor.RESET + "" +  ChatColor.GREEN + "総整地量:" + rankdata.totalbreaknum);
 
 			skullmeta.setLore(lore);
-			skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(rankdata.name));
+			skullmeta.setOwner(rankdata.name);
 			itemstack.setItemMeta(skullmeta);
-			inventory.setItem(count2,itemstack);
+			AsyncInventorySetter.setItemAsync(inventory,count2,itemstack.clone());
 		}
 
 		if(page!=maxpage){
@@ -1476,9 +1466,9 @@ public class MenuInventoryData {
 		lore.add(ChatColor.RESET + "" +  ChatColor.DARK_RED + "" + ChatColor.UNDERLINE + "クリックで移動"
 				);
 		skullmeta.setLore(lore);
-		skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.ARROW_DOWN.getUuid()));
+		skullmeta.setOwner("MHF_ArrowDown");
 		itemstack.setItemMeta(skullmeta);
-		inventory.setItem(52,itemstack);
+		AsyncInventorySetter.setItemAsync(inventory,52,itemstack.clone());
 		}
 
 		// 1ページ目を開く
@@ -1487,18 +1477,18 @@ public class MenuInventoryData {
 			lore.clear();
 			lore.add(ChatColor.RESET + "" +  ChatColor.DARK_RED + "" + ChatColor.UNDERLINE + "クリックで移動");
 			skullmeta.setLore(lore);
-			skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.ARROW_LEFT.getUuid()));
+			skullmeta.setOwner("MHF_ArrowLeft");
 			itemstack.setItemMeta(skullmeta);
-			inventory.setItem(45,itemstack);
+			AsyncInventorySetter.setItemAsync(inventory,45,itemstack.clone());
 		} else {
 			// 整地神ランキング前ページ目を開く;
 			skullmeta.setDisplayName(ChatColor.YELLOW + "" + ChatColor.UNDERLINE + "" + ChatColor.BOLD + "整地神ランキング"+page+"ページ目へ");
 			lore.clear();
 			lore.add(ChatColor.RESET + "" +  ChatColor.DARK_RED + "" + ChatColor.UNDERLINE + "クリックで移動");
 			skullmeta.setLore(lore);
-			skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.ARROW_UP.getUuid()));
+			skullmeta.setOwner("MHF_ArrowUp");
 			itemstack.setItemMeta(skullmeta);
-			inventory.setItem(45,itemstack);
+			AsyncInventorySetter.setItemAsync(inventory,45,itemstack.clone());
 		}
 
 		// 総整地量の表記
@@ -1508,9 +1498,9 @@ public class MenuInventoryData {
 				,ChatColor.RESET + "" +  ChatColor.AQUA + SeichiAssist.allplayerbreakblockint
 				));
 		skullmeta.setLore(lore);
-		skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.UNCHAMA.getUuid()));
+		skullmeta.setOwner("unchama");
 		itemstack.setItemMeta(skullmeta);
-		inventory.setItem(53,itemstack);
+		AsyncInventorySetter.setItemAsync(inventory,53,itemstack.clone());
 
 		return inventory;
 	}
@@ -1544,9 +1534,9 @@ public class MenuInventoryData {
 			lore.add(ChatColor.RESET + "" +  ChatColor.GREEN + "総ログイン時間:" + TypeConverter.toTimeString(TypeConverter.toSecond(rankdata.playtick)));
 
 			skullmeta.setLore(lore);
-			skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(rankdata.name));
+			skullmeta.setOwner(rankdata.name);
 			itemstack.setItemMeta(skullmeta);
-			inventory.setItem(count2,itemstack);
+			AsyncInventorySetter.setItemAsync(inventory,count2,itemstack.clone());
 		}
 
 		if(page!=maxpage){
@@ -1556,9 +1546,9 @@ public class MenuInventoryData {
 		lore.add(ChatColor.RESET + "" +  ChatColor.DARK_RED + "" + ChatColor.UNDERLINE + "クリックで移動"
 				);
 		skullmeta.setLore(lore);
-		skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.ARROW_DOWN.getUuid()));
+		skullmeta.setOwner("MHF_ArrowDown");
 		itemstack.setItemMeta(skullmeta);
-		inventory.setItem(52,itemstack);
+		AsyncInventorySetter.setItemAsync(inventory,52,itemstack.clone());
 		}
 
 		// 1ページ目を開く
@@ -1567,18 +1557,18 @@ public class MenuInventoryData {
 			lore.clear();
 			lore.add(ChatColor.RESET + "" +  ChatColor.DARK_RED + "" + ChatColor.UNDERLINE + "クリックで移動");
 			skullmeta.setLore(lore);
-			skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.ARROW_LEFT.getUuid()));
+			skullmeta.setOwner("MHF_ArrowLeft");
 			itemstack.setItemMeta(skullmeta);
-			inventory.setItem(45,itemstack);
+			AsyncInventorySetter.setItemAsync(inventory,45,itemstack.clone());
 		} else {
 			// 整地神ランキング前ページ目を開く;
 			skullmeta.setDisplayName(ChatColor.YELLOW + "" + ChatColor.UNDERLINE + "" + ChatColor.BOLD + "ログイン神ランキング"+page+"ページ目へ");
 			lore.clear();
 			lore.add(ChatColor.RESET + "" +  ChatColor.DARK_RED + "" + ChatColor.UNDERLINE + "クリックで移動");
 			skullmeta.setLore(lore);
-			skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.ARROW_UP.getUuid()));
+			skullmeta.setOwner("MHF_ArrowUp");
 			itemstack.setItemMeta(skullmeta);
-			inventory.setItem(45,itemstack);
+			AsyncInventorySetter.setItemAsync(inventory,45,itemstack.clone());
 		}
 
 		// 総整地量の表記
@@ -1627,9 +1617,9 @@ public class MenuInventoryData {
 			lore.add(ChatColor.RESET + "" +  ChatColor.GREEN + "総投票回数:" + rankdata.p_vote);
 
 			skullmeta.setLore(lore);
-			skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(rankdata.name));
+			skullmeta.setOwner(rankdata.name);
 			itemstack.setItemMeta(skullmeta);
-			inventory.setItem(count2,itemstack);
+			AsyncInventorySetter.setItemAsync(inventory,count2,itemstack.clone());
 		}
 
 		if(page!=maxpage){
@@ -1639,9 +1629,9 @@ public class MenuInventoryData {
 		lore.add(ChatColor.RESET + "" +  ChatColor.DARK_RED + "" + ChatColor.UNDERLINE + "クリックで移動"
 				);
 		skullmeta.setLore(lore);
-		skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.ARROW_DOWN.getUuid()));
+		skullmeta.setOwner("MHF_ArrowDown");
 		itemstack.setItemMeta(skullmeta);
-		inventory.setItem(52,itemstack);
+		AsyncInventorySetter.setItemAsync(inventory,52,itemstack.clone());
 		}
 
 		// 1ページ目を開く
@@ -1650,18 +1640,18 @@ public class MenuInventoryData {
 			lore.clear();
 			lore.add(ChatColor.RESET + "" +  ChatColor.DARK_RED + "" + ChatColor.UNDERLINE + "クリックで移動");
 			skullmeta.setLore(lore);
-			skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.ARROW_LEFT.getUuid()));
+			skullmeta.setOwner("MHF_ArrowLeft");
 			itemstack.setItemMeta(skullmeta);
-			inventory.setItem(45,itemstack);
+			AsyncInventorySetter.setItemAsync(inventory,45,itemstack.clone());
 		} else {
 			// 整地神ランキング前ページ目を開く;
 			skullmeta.setDisplayName(ChatColor.YELLOW + "" + ChatColor.UNDERLINE + "" + ChatColor.BOLD + "投票神ランキング"+page+"ページ目へ");
 			lore.clear();
 			lore.add(ChatColor.RESET + "" +  ChatColor.DARK_RED + "" + ChatColor.UNDERLINE + "クリックで移動");
 			skullmeta.setLore(lore);
-			skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.ARROW_UP.getUuid()));
+			skullmeta.setOwner("MHF_ArrowUp");
 			itemstack.setItemMeta(skullmeta);
-			inventory.setItem(45,itemstack);
+			AsyncInventorySetter.setItemAsync(inventory,45,itemstack.clone());
 		}
 
 		// 総整地量の表記
@@ -1708,9 +1698,9 @@ public class MenuInventoryData {
 			lore.add(ChatColor.RESET + "" +  ChatColor.GREEN + "総寄付金額:" + rankdata.premiumeffectpoint*100);
 
 			skullmeta.setLore(lore);
-			skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(rankdata.name));
+			skullmeta.setOwner(rankdata.name);
 			itemstack.setItemMeta(skullmeta);
-			inventory.setItem(count2,itemstack);
+			AsyncInventorySetter.setItemAsync(inventory,count2,itemstack.clone());
 		}
 
 		if(page!=maxpage){
@@ -1720,9 +1710,9 @@ public class MenuInventoryData {
 		lore.add(ChatColor.RESET + "" +  ChatColor.DARK_RED + "" + ChatColor.UNDERLINE + "クリックで移動"
 				);
 		skullmeta.setLore(lore);
-		skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.ARROW_DOWN.getUuid()));
+		skullmeta.setOwner("MHF_ArrowDown");
 		itemstack.setItemMeta(skullmeta);
-		inventory.setItem(52,itemstack);
+		AsyncInventorySetter.setItemAsync(inventory,52,itemstack.clone());
 		}
 
 		// 1ページ目を開く
@@ -1731,18 +1721,18 @@ public class MenuInventoryData {
 			lore.clear();
 			lore.add(ChatColor.RESET + "" +  ChatColor.DARK_RED + "" + ChatColor.UNDERLINE + "クリックで移動");
 			skullmeta.setLore(lore);
-			skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.ARROW_LEFT.getUuid()));
+			skullmeta.setOwner("MHF_ArrowLeft");
 			itemstack.setItemMeta(skullmeta);
-			inventory.setItem(45,itemstack);
+			AsyncInventorySetter.setItemAsync(inventory,45,itemstack.clone());
 		} else {
 			// 整地神ランキング前ページ目を開く;
 			skullmeta.setDisplayName(ChatColor.YELLOW + "" + ChatColor.UNDERLINE + "" + ChatColor.BOLD + "寄付神ランキング"+page+"ページ目へ");
 			lore.clear();
 			lore.add(ChatColor.RESET + "" +  ChatColor.DARK_RED + "" + ChatColor.UNDERLINE + "クリックで移動");
 			skullmeta.setLore(lore);
-			skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.ARROW_UP.getUuid()));
+			skullmeta.setOwner("MHF_ArrowUp");
 			itemstack.setItemMeta(skullmeta);
-			inventory.setItem(45,itemstack);
+			AsyncInventorySetter.setItemAsync(inventory,45,itemstack.clone());
 		}
 
 		// 総整地量の表記
@@ -1790,9 +1780,9 @@ public class MenuInventoryData {
 				skullmeta.setDisplayName(ChatColor.YELLOW + "" + ChatColor.UNDERLINE + "" + ChatColor.BOLD + "スキルメニューへ");
 				lore = ImmutableListFactory.of(ChatColor.RESET + "" +  ChatColor.DARK_RED + "" + ChatColor.UNDERLINE + "クリックで移動");
 				skullmeta.setLore(lore);
-				skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.ARROW_LEFT.getUuid()));
+				skullmeta.setOwner("MHF_ArrowLeft");
 				itemstack.setItemMeta(skullmeta);
-				inventory.setItem(45,itemstack);
+				AsyncInventorySetter.setItemAsync(inventory,45,itemstack.clone());
 
 				//1行目
 
@@ -1812,7 +1802,7 @@ public class MenuInventoryData {
 				// この操作は安全; メニューを開けているのにUUIDがないなんてことがないから
 				skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(playerdata.uuid)); //.setOwner(playerdata.name);
 				itemstack.setItemMeta(skullmeta);
-				inventory.setItem(0,itemstack);
+				AsyncInventorySetter.setItemAsync(inventory,0,itemstack.clone());
 
 
 				itemstack = new ItemStack(Material.BOOK_AND_QUILL,1);
@@ -1864,7 +1854,7 @@ public class MenuInventoryData {
 
 				for(int i = 0; i < premiumeffect.length;i++){
 					//プレイヤーがそのスキルを取得している場合の処理
-					if (playerdata.activeskilldata.obtainedSkillEffects.contains(premiumeffect[i])) {
+					if (playerdata.activeskilldata.obtainedSkillPremiumEffects.contains(premiumeffect[i])) {
 						itemstack = new ItemStack(premiumeffect[i].getMaterial(),1);
 						itemmeta = Bukkit.getItemFactory().getItemMeta(premiumeffect[i].getMaterial());
 						itemmeta.setDisplayName(ChatColor.UNDERLINE + "" + ChatColor.BOLD + ChatColor.stripColor(premiumeffect[i].getName()));
@@ -1905,9 +1895,9 @@ public class MenuInventoryData {
 		skullmeta.setDisplayName(ChatColor.YELLOW + "" + ChatColor.UNDERLINE + "" + ChatColor.BOLD + "エフェクト選択メニューへ");
 		lore = ImmutableListFactory.of(ChatColor.RESET + "" +  ChatColor.DARK_RED + "" + ChatColor.UNDERLINE + "クリックで移動");
 		skullmeta.setLore(lore);
-		skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.ARROW_LEFT.getUuid()));
+		skullmeta.setOwner("MHF_ArrowLeft");
 		itemstack.setItemMeta(skullmeta);
-		inventory.setItem(27,itemstack);
+		AsyncInventorySetter.setItemAsync(inventory,27,itemstack.clone());
 
 		databaseGateway.donateDataManipulator.loadDonateData(playerdata,inventory);
 
@@ -1957,9 +1947,9 @@ public class MenuInventoryData {
 					,ChatColor.RESET + "" +  ChatColor.RED + "「二つ名」のプレゼントが届いています。"
 					,ChatColor.RESET + "" +  ChatColor.YELLOW + "クリックすることで受け取れます！");
 			skullmeta.setLore(lore);
-			skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.PRESENT2.getUuid()));
+			skullmeta.setOwner("MHF_Present2");
 			itemstack.setItemMeta(skullmeta);
-			inventory.setItem(1,itemstack);
+			AsyncInventorySetter.setItemAsync(inventory,1,itemstack.clone());
 		}
 
 		//二つ名組合せシステム画面へ移動
@@ -2037,9 +2027,9 @@ public class MenuInventoryData {
 		skullmeta.setDisplayName(ChatColor.YELLOW + "" + ChatColor.UNDERLINE + "" + ChatColor.BOLD + "ホームへ");
 		lore = ImmutableListFactory.of(ChatColor.RESET + "" +  ChatColor.DARK_RED + "" + ChatColor.UNDERLINE + "クリックで移動");
 		skullmeta.setLore(lore);
-		skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.ARROW_LEFT.getUuid()));
+		skullmeta.setOwner("MHF_ArrowLeft");
 		itemstack.setItemMeta(skullmeta);
-		inventory.setItem(27,itemstack);
+		AsyncInventorySetter.setItemAsync(inventory,27,itemstack.clone());
 
 		return inventory;
 	}
@@ -2170,9 +2160,9 @@ public class MenuInventoryData {
 		skullmeta.setDisplayName(ChatColor.YELLOW + "" + ChatColor.UNDERLINE + "" + ChatColor.BOLD + "実績・二つ名メニューへ");
 		lore = ImmutableListFactory.of(ChatColor.RESET + "" +  ChatColor.DARK_RED + "" + ChatColor.UNDERLINE + "クリックで移動");
 		skullmeta.setLore(lore);
-		skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.ARROW_LEFT.getUuid()));
+		skullmeta.setOwner("MHF_ArrowLeft");
 		itemstack.setItemMeta(skullmeta);
-		inventory.setItem(27,itemstack);
+		AsyncInventorySetter.setItemAsync(inventory,27,itemstack.clone());
 
 		return inventory;
 	}
@@ -2235,9 +2225,9 @@ public class MenuInventoryData {
 				skullmeta.setDisplayName(ChatColor.YELLOW + "" + ChatColor.UNDERLINE + "" + ChatColor.BOLD + "次ページへ");
 				lore = ImmutableListFactory.of(ChatColor.RESET + "" +  ChatColor.DARK_RED + "" + ChatColor.UNDERLINE + "クリックで移動");
 				skullmeta.setLore(lore);
-				skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.ARROW_RIGHT.getUuid()));
+				skullmeta.setOwner("MHF_ArrowRight");
 				itemstack.setItemMeta(skullmeta);
-				inventory.setItem(35,itemstack);
+				AsyncInventorySetter.setItemAsync(inventory,35,itemstack.clone());
 
 				nextpageflag1 = true ;
 
@@ -2344,9 +2334,9 @@ public class MenuInventoryData {
 				skullmeta.setDisplayName(ChatColor.YELLOW + "" + ChatColor.UNDERLINE + "" + ChatColor.BOLD + "次ページへ");
 				lore = ImmutableListFactory.of(ChatColor.RESET + "" +  ChatColor.DARK_RED + "" + ChatColor.UNDERLINE + "クリックで移動");
 				skullmeta.setLore(lore);
-				skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.ARROW_RIGHT.getUuid()));
+				skullmeta.setOwner("MHF_ArrowRight");
 				itemstack.setItemMeta(skullmeta);
-				inventory.setItem(35,itemstack);
+				AsyncInventorySetter.setItemAsync(inventory,35,itemstack.clone());
 
 				break;
 			}
@@ -2433,9 +2423,9 @@ public class MenuInventoryData {
 				skullmeta.setDisplayName(ChatColor.YELLOW + "" + ChatColor.UNDERLINE + "" + ChatColor.BOLD + "次ページへ");
 				lore = ImmutableListFactory.of(ChatColor.RESET + "" +  ChatColor.DARK_RED + "" + ChatColor.UNDERLINE + "クリックで移動");
 				skullmeta.setLore(lore);
-				skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.ARROW_RIGHT.getUuid()));
+				skullmeta.setOwner("MHF_ArrowRight");
 				itemstack.setItemMeta(skullmeta);
-				inventory.setItem(35,itemstack);
+				AsyncInventorySetter.setItemAsync(inventory,35,itemstack.clone());
 
 				nextpageflag3 = true ;
 
@@ -2537,9 +2527,9 @@ public class MenuInventoryData {
 				skullmeta.setDisplayName(ChatColor.YELLOW + "" + ChatColor.UNDERLINE + "" + ChatColor.BOLD + "次ページへ");
 				lore = ImmutableListFactory.of(ChatColor.RESET + "" +  ChatColor.DARK_RED + "" + ChatColor.UNDERLINE + "クリックで移動");
 				skullmeta.setLore(lore);
-				skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.ARROW_RIGHT.getUuid()));
+				skullmeta.setOwner("MHF_ArrowRight");
 				itemstack.setItemMeta(skullmeta);
-				inventory.setItem(35,itemstack);
+				AsyncInventorySetter.setItemAsync(inventory,35,itemstack.clone());
 
 				nextpageflagS = true ;
 
@@ -2574,9 +2564,9 @@ public class MenuInventoryData {
 				skullmeta.setDisplayName(ChatColor.YELLOW + "" + ChatColor.UNDERLINE + "" + ChatColor.BOLD + "次ページへ");
 				lore = ImmutableListFactory.of(ChatColor.RESET + "" +  ChatColor.DARK_RED + "" + ChatColor.UNDERLINE + "クリックで移動");
 				skullmeta.setLore(lore);
-				skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.ARROW_RIGHT.getUuid()));
+				skullmeta.setOwner("MHF_ArrowRight");
 				itemstack.setItemMeta(skullmeta);
-				inventory.setItem(35,itemstack);
+				AsyncInventorySetter.setItemAsync(inventory,35,itemstack.clone());
 
 				nextpageflagS = true ;
 
@@ -2650,9 +2640,9 @@ public class MenuInventoryData {
 		skullmeta.setDisplayName(ChatColor.YELLOW + "" + ChatColor.UNDERLINE + "" + ChatColor.BOLD + "実績・二つ名メニューへ");
 		lore = ImmutableListFactory.of(ChatColor.RESET + "" +  ChatColor.DARK_RED + "" + ChatColor.UNDERLINE + "クリックで移動");
 		skullmeta.setLore(lore);
-		skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.ARROW_LEFT.getUuid()));
+		skullmeta.setOwner("MHF_ArrowLeft");
 		itemstack.setItemMeta(skullmeta);
-		inventory.setItem(27,itemstack);
+		AsyncInventorySetter.setItemAsync(inventory,27,itemstack.clone());
 
 		return inventory;
 	}
@@ -2690,9 +2680,9 @@ public class MenuInventoryData {
 		skullmeta.setDisplayName(ChatColor.YELLOW + "" + ChatColor.UNDERLINE + "" + ChatColor.BOLD + "実績・二つ名メニューへ");
 		lore = ImmutableListFactory.of(ChatColor.RESET + "" +  ChatColor.DARK_RED + "" + ChatColor.UNDERLINE + "クリックで移動");
 		skullmeta.setLore(lore);
-		skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.ARROW_LEFT.getUuid()));
+		skullmeta.setOwner("MHF_ArrowLeft");
 		itemstack.setItemMeta(skullmeta);
-		inventory.setItem(27,itemstack);
+		AsyncInventorySetter.setItemAsync(inventory,27,itemstack.clone());
 
 		return inventory;
 	}
@@ -2760,9 +2750,9 @@ public class MenuInventoryData {
 		skullmeta.setDisplayName(ChatColor.YELLOW + "" + ChatColor.UNDERLINE + "" + ChatColor.BOLD + "実績・二つ名メニューへ");
 		lore = ImmutableListFactory.of(ChatColor.RESET + "" +  ChatColor.DARK_RED + "" + ChatColor.UNDERLINE + "クリックで移動");
 		skullmeta.setLore(lore);
-		skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.ARROW_LEFT.getUuid()));
+		skullmeta.setOwner("MHF_ArrowLeft");
 		itemstack.setItemMeta(skullmeta);
-		inventory.setItem(27,itemstack);
+		AsyncInventorySetter.setItemAsync(inventory,27,itemstack.clone());
 
 		return inventory;
 	}
@@ -2814,9 +2804,9 @@ public class MenuInventoryData {
 		skullmeta.setDisplayName(ChatColor.YELLOW + "" + ChatColor.UNDERLINE + "" + ChatColor.BOLD + "実績・二つ名メニューへ");
 		lore = ImmutableListFactory.of(ChatColor.RESET + "" +  ChatColor.DARK_RED + "" + ChatColor.UNDERLINE + "クリックで移動");
 		skullmeta.setLore(lore);
-		skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.ARROW_LEFT.getUuid()));
+		skullmeta.setOwner("MHF_ArrowLeft");
 		itemstack.setItemMeta(skullmeta);
-		inventory.setItem(27,itemstack);
+		AsyncInventorySetter.setItemAsync(inventory,27,itemstack.clone());
 
 		return inventory;
 	}
@@ -2877,9 +2867,9 @@ public class MenuInventoryData {
 		skullmeta.setDisplayName(ChatColor.YELLOW + "" + ChatColor.UNDERLINE + "" + ChatColor.BOLD + "実績・二つ名メニューへ");
 		lore = ImmutableListFactory.of(ChatColor.RESET + "" +  ChatColor.DARK_RED + "" + ChatColor.UNDERLINE + "クリックで移動");
 		skullmeta.setLore(lore);
-		skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.ARROW_LEFT.getUuid()));
+		skullmeta.setOwner("MHF_ArrowLeft");
 		itemstack.setItemMeta(skullmeta);
-		inventory.setItem(27,itemstack);
+		AsyncInventorySetter.setItemAsync(inventory,27,itemstack.clone());
 
 		return inventory;
 	}
@@ -3188,9 +3178,9 @@ public class MenuInventoryData {
 		skullmeta.setDisplayName(ChatColor.YELLOW + "" + ChatColor.UNDERLINE + "" + ChatColor.BOLD + "「整地」カテゴリメニューへ");
 		lore = ImmutableListFactory.of(ChatColor.RESET + "" +  ChatColor.DARK_RED + "" + ChatColor.UNDERLINE + "クリックで移動");
 		skullmeta.setLore(lore);
-		skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.ARROW_LEFT.getUuid()));
+		skullmeta.setOwner("MHF_ArrowLeft");
 		itemstack.setItemMeta(skullmeta);
-		inventory.setItem(27,itemstack);
+		AsyncInventorySetter.setItemAsync(inventory,27,itemstack.clone());
 
 		return inventory;
 	}
@@ -3702,9 +3692,9 @@ public class MenuInventoryData {
 		skullmeta.setDisplayName(ChatColor.YELLOW + "" + ChatColor.UNDERLINE + "" + ChatColor.BOLD + "「整地」カテゴリメニューへ");
 		lore = ImmutableListFactory.of(ChatColor.RESET + "" +  ChatColor.DARK_RED + "" + ChatColor.UNDERLINE + "クリックで移動");
 		skullmeta.setLore(lore);
-		skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.ARROW_LEFT.getUuid()));
+		skullmeta.setOwner("MHF_ArrowLeft");
 		itemstack.setItemMeta(skullmeta);
-		inventory.setItem(27,itemstack);
+		AsyncInventorySetter.setItemAsync(inventory,27,itemstack.clone());
 
 		return inventory;
 	}
@@ -4339,9 +4329,9 @@ public class MenuInventoryData {
 		skullmeta.setDisplayName(ChatColor.YELLOW + "" + ChatColor.UNDERLINE + "" + ChatColor.BOLD + "「ログイン」カテゴリメニューへ");
 		lore = ImmutableListFactory.of(ChatColor.RESET + "" +  ChatColor.DARK_RED + "" + ChatColor.UNDERLINE + "クリックで移動");
 		skullmeta.setLore(lore);
-		skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.ARROW_LEFT.getUuid()));
+		skullmeta.setOwner("MHF_ArrowLeft");
 		itemstack.setItemMeta(skullmeta);
-		inventory.setItem(27,itemstack);
+		AsyncInventorySetter.setItemAsync(inventory,27,itemstack.clone());
 
 		return inventory;
 	}
@@ -4868,9 +4858,9 @@ public class MenuInventoryData {
 		skullmeta.setDisplayName(ChatColor.YELLOW + "" + ChatColor.UNDERLINE + "" + ChatColor.BOLD + "「ログイン」カテゴリメニューへ");
 		lore = ImmutableListFactory.of(ChatColor.RESET + "" +  ChatColor.DARK_RED + "" + ChatColor.UNDERLINE + "クリックで移動");
 		skullmeta.setLore(lore);
-		skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.ARROW_LEFT.getUuid()));
+		skullmeta.setOwner("MHF_ArrowLeft");
 		itemstack.setItemMeta(skullmeta);
-		inventory.setItem(27,itemstack);
+		AsyncInventorySetter.setItemAsync(inventory,27,itemstack.clone());
 
 		return inventory;
 	}
@@ -5081,9 +5071,9 @@ public class MenuInventoryData {
 		skullmeta.setDisplayName(ChatColor.YELLOW + "" + ChatColor.UNDERLINE + "" + ChatColor.BOLD + "「ログイン」カテゴリメニューへ");
 		lore = ImmutableListFactory.of(ChatColor.RESET + "" +  ChatColor.DARK_RED + "" + ChatColor.UNDERLINE + "クリックで移動");
 		skullmeta.setLore(lore);
-		skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.ARROW_LEFT.getUuid()));
+		skullmeta.setOwner("MHF_ArrowLeft");
 		itemstack.setItemMeta(skullmeta);
-		inventory.setItem(27,itemstack);
+		AsyncInventorySetter.setItemAsync(inventory,27,itemstack.clone());
 
 		return inventory;
 	}
@@ -5303,9 +5293,9 @@ public class MenuInventoryData {
 		skullmeta.setDisplayName(ChatColor.YELLOW + "" + ChatColor.UNDERLINE + "" + ChatColor.BOLD + "「特殊」カテゴリメニューへ");
 		lore = ImmutableListFactory.of(ChatColor.RESET + "" +  ChatColor.DARK_RED + "" + ChatColor.UNDERLINE + "クリックで移動");
 		skullmeta.setLore(lore);
-		skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.ARROW_LEFT.getUuid()));
+		skullmeta.setOwner("MHF_ArrowLeft");
 		itemstack.setItemMeta(skullmeta);
-		inventory.setItem(27,itemstack);
+		AsyncInventorySetter.setItemAsync(inventory,27,itemstack.clone());
 
 		return inventory;
 	}
@@ -6111,9 +6101,9 @@ public class MenuInventoryData {
 		skullmeta.setDisplayName(ChatColor.YELLOW + "" + ChatColor.UNDERLINE + "" + ChatColor.BOLD + "「特殊」カテゴリメニューへ");
 		lore = ImmutableListFactory.of(ChatColor.RESET + "" +  ChatColor.DARK_RED + "" + ChatColor.UNDERLINE + "クリックで移動");
 		skullmeta.setLore(lore);
-		skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.ARROW_LEFT.getUuid()));
+		skullmeta.setOwner("MHF_ArrowLeft");
 		itemstack.setItemMeta(skullmeta);
-		inventory.setItem(27,itemstack);
+		AsyncInventorySetter.setItemAsync(inventory,27,itemstack.clone());
 
 		return inventory;
 	}
@@ -6903,9 +6893,9 @@ public class MenuInventoryData {
 		skullmeta.setDisplayName(ChatColor.YELLOW + "" + ChatColor.UNDERLINE + "" + ChatColor.BOLD + "「ログイン」カテゴリメニューへ");
 		lore = ImmutableListFactory.of(ChatColor.RESET + "" +  ChatColor.DARK_RED + "" + ChatColor.UNDERLINE + "クリックで移動");
 		skullmeta.setLore(lore);
-		skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.ARROW_LEFT.getUuid()));
+		skullmeta.setOwner("MHF_ArrowLeft");
 		itemstack.setItemMeta(skullmeta);
-		inventory.setItem(27,itemstack);
+		AsyncInventorySetter.setItemAsync(inventory,27,itemstack.clone());
 
 		//次ページへのボタンを配置
 		itemstack = new ItemStack(Material.SKULL_ITEM,1);
@@ -6914,9 +6904,9 @@ public class MenuInventoryData {
 		skullmeta.setDisplayName(ChatColor.YELLOW + "" + ChatColor.UNDERLINE + "" + ChatColor.BOLD + "次ページへ");
 		lore = ImmutableListFactory.of(ChatColor.RESET + "" +  ChatColor.DARK_RED + "" + ChatColor.UNDERLINE + "クリックで移動");
 		skullmeta.setLore(lore);
-		skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.ARROW_RIGHT.getUuid()));
+		skullmeta.setOwner("MHF_ArrowRight");
 		itemstack.setItemMeta(skullmeta);
-		inventory.setItem(35,itemstack);
+		AsyncInventorySetter.setItemAsync(inventory,35,itemstack.clone());
 
 
 		return inventory;
@@ -7034,9 +7024,9 @@ public class MenuInventoryData {
 		skullmeta.setDisplayName(ChatColor.YELLOW + "" + ChatColor.UNDERLINE + "" + ChatColor.BOLD + "「特殊」カテゴリメニューへ");
 		lore = ImmutableListFactory.of(ChatColor.RESET + "" +  ChatColor.DARK_RED + "" + ChatColor.UNDERLINE + "クリックで移動");
 		skullmeta.setLore(lore);
-		skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.ARROW_LEFT.getUuid()));
+		skullmeta.setOwner("MHF_ArrowLeft");
 		itemstack.setItemMeta(skullmeta);
-		inventory.setItem(27,itemstack);
+		AsyncInventorySetter.setItemAsync(inventory,27,itemstack.clone());
 
 		return inventory;
 	}
@@ -7152,9 +7142,9 @@ public class MenuInventoryData {
 		skullmeta.setDisplayName(ChatColor.YELLOW + "" + ChatColor.UNDERLINE + "" + ChatColor.BOLD + "ホームへ");
 		lore = ImmutableListFactory.of(ChatColor.RESET + "" +  ChatColor.DARK_RED + "" + ChatColor.UNDERLINE + "クリックで移動");
 		skullmeta.setLore(lore);
-		skullmeta.setOwningPlayer(Bukkit.getOfflinePlayer(Skulls.ARROW_LEFT.getUuid()));
+		skullmeta.setOwner("MHF_ArrowLeft");
 		itemstack.setItemMeta(skullmeta);
-		inventory.setItem(27,itemstack);
+		AsyncInventorySetter.setItemAsync(inventory,27,itemstack.clone());
 
 		//妖精召喚時間設定トグルボタン
 		itemstack = new ItemStack(Material.WATCH);
