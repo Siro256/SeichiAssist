@@ -1,13 +1,14 @@
 package com.github.unchama.seichiassist
 
+import com.github.unchama.buildassist.BuildAssist
 import com.github.unchama.menuinventory.MenuHandler
 import com.github.unchama.seichiassist.bungee.BungeeReceiver
 import com.github.unchama.seichiassist.commands.*
 import com.github.unchama.seichiassist.commands.legacy.GachaCommand
 import com.github.unchama.seichiassist.data.GachaPrize
 import com.github.unchama.seichiassist.data.MineStackGachaData
-import com.github.unchama.seichiassist.data.PlayerData
 import com.github.unchama.seichiassist.data.RankData
+import com.github.unchama.seichiassist.data.player.PlayerData
 import com.github.unchama.seichiassist.database.DatabaseGateway
 import com.github.unchama.seichiassist.listener.*
 import com.github.unchama.seichiassist.listener.new_year_event.NewYearsEvent
@@ -27,17 +28,19 @@ import org.bukkit.ChatColor.GREEN
 import org.bukkit.ChatColor.RED
 import org.bukkit.Material
 import org.bukkit.block.Block
+import org.bukkit.command.Command
+import org.bukkit.command.CommandSender
 import org.bukkit.entity.Entity
 import org.bukkit.plugin.java.JavaPlugin
 import java.util.*
 
 
 class SeichiAssist : JavaPlugin() {
-  init {
-    instance = this
-  }
+  init { instance = this }
 
   private var repeatedJobCoroutine: Job? = null
+
+  val expBarSynchronization = ExpBarSynchronization()
 
   override fun onEnable() {
 
@@ -116,19 +119,19 @@ class SeichiAssist : JavaPlugin() {
 
     //リスナーの登録
     listOf(
-      PlayerJoinListener(),
-      PlayerQuitListener(),
-      PlayerClickListener(),
-      PlayerChatEventListener(),
-      PlayerBlockBreakListener(),
-      PlayerInventoryListener(),
-      EntityListener(),
-      PlayerPickupItemListener(),
-      PlayerDeathEventListener(),
-      GachaItemListener(),
-      MebiusListener(),
-      RegionInventoryListener(),
-      WorldRegenListener()
+        PlayerJoinListener(),
+        PlayerQuitListener(),
+        PlayerClickListener(),
+        PlayerChatEventListener(),
+        PlayerBlockBreakListener(),
+        PlayerInventoryListener(),
+        EntityListener(),
+        PlayerPickupItemListener(),
+        PlayerDeathEventListener(),
+        GachaItemListener(),
+        MebiusListener(),
+        RegionInventoryListener(),
+        WorldRegenListener()
     ).forEach { server.pluginManager.registerEvents(it, this) }
 
     //正月イベント用
@@ -140,7 +143,7 @@ class SeichiAssist : JavaPlugin() {
     //オンラインの全てのプレイヤーを処理
     for (p in server.onlinePlayers) {
       //プレイヤーデータを生成
-      databaseGateway.playerDataManipulator.loadPlayerData(PlayerData(p))
+      playermap[p.uniqueId] = databaseGateway.playerDataManipulator.loadPlayerData(p.uniqueId, p.name)
     }
 
     //ランキングリストを最新情報に更新する
@@ -152,6 +155,8 @@ class SeichiAssist : JavaPlugin() {
     startRepeatedJobs()
 
     logger.info("SeichiAssist is Enabled!")
+
+    buildAssist = BuildAssist(this).apply { onEnable() }
   }
 
   override fun onDisable() {
@@ -178,17 +183,22 @@ class SeichiAssist : JavaPlugin() {
         continue
       }
       //quit時とondisable時、プレイヤーデータを最新の状態に更新
-      playerdata.updateonQuit(p)
+      playerdata.updateOnQuit()
 
       PlayerDataSaveTask(playerdata, true, true).run()
     }
 
-    if (databaseGateway.disconnect() == Fail) {
+    if (databaseGateway.disconnect() === Fail) {
       logger.info("データベース切断に失敗しました")
     }
 
     logger.info("SeichiAssist is Disabled!")
+
+    buildAssist.onDisable()
   }
+
+  override fun onCommand(sender: CommandSender?, command: Command?, label: String?, args: Array<out String>?)
+      = buildAssist.onCommand(sender, command, label, args)
 
   private fun startRepeatedJobs() {
     repeatedJobCoroutine = CoroutineScope(Schedulers.sync).launch {
@@ -222,6 +232,8 @@ class SeichiAssist : JavaPlugin() {
     // TODO staticであるべきではない
     lateinit var databaseGateway: DatabaseGateway
     lateinit var seichiAssistConfig: Config
+
+    lateinit var buildAssist: BuildAssist
 
     //Gachadataに依存するデータリスト
     val gachadatalist: MutableList<GachaPrize> = ArrayList()
@@ -262,7 +274,7 @@ class SeichiAssist : JavaPlugin() {
       val minestacklist = ArrayList<MineStackObj>()
       for (i in msgachadatalist.indices) {
         val g = msgachadatalist[i]
-        if (g.itemStack.type != Material.EXP_BOTTLE) { //経験値瓶だけはすでにリストにあるので除外
+        if (g.itemStack.type !== Material.EXP_BOTTLE) { //経験値瓶だけはすでにリストにあるので除外
           minestacklist.add(MineStackObj(g.objName, g.level, g.itemStack, true, i, MineStackObjectCategory.GACHA_PRIZES))
         }
       }

@@ -70,7 +70,7 @@ internal object MineStackButtons {
           sequentialEffect(
               withDrawOneStackEffect(mineStackObj),
               unfocusedEffect {
-                if (mineStackObj.category() != MineStackObjectCategory.GACHA_PRIZES) {
+                if (mineStackObj.category() !== MineStackObjectCategory.GACHA_PRIZES) {
                   playerData.hisotryData.add(mineStackObj)
                 }
               }
@@ -87,7 +87,7 @@ internal object MineStackButtons {
           IconItemStackBuilder(Material.IRON_PICKAXE)
               .title("$YELLOW$UNDERLINE${BOLD}対象ブロック自動スタック機能")
 
-      if (playerData.minestackflag) {
+      if (playerData.settings.autoMineStack) {
         baseBuilder
             .enchanted()
             .lore(listOf(
@@ -105,12 +105,12 @@ internal object MineStackButtons {
 
     val buttonEffect = FilteredButtonEffect(ClickEventFilter.ALWAYS_INVOKE) {
       sequentialEffect(
-          playerData.toggleAutoMineStack,
+          playerData.settings.toggleAutoMineStack,
           deferredEffect {
             val message: String
             val soundPitch: Float
             when {
-              playerData.minestackflag -> {
+              playerData.settings.autoMineStack -> {
                 message = "${GREEN}対象ブロック自動スタック機能:ON"
                 soundPitch = 1.0f
               }

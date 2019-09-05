@@ -12,12 +12,13 @@ import com.github.unchama.menuinventory.slot.button.action.FilteredButtonEffect
 import com.github.unchama.menuinventory.slot.button.action.LeftClickButtonEffect
 import com.github.unchama.menuinventory.slot.button.recomputedButton
 import com.github.unchama.seasonalevents.events.valentine.Valentine
+import com.github.unchama.seichiassist.CommonSoundEffects
 import com.github.unchama.seichiassist.Schedulers
 import com.github.unchama.seichiassist.SeichiAssist
 import com.github.unchama.seichiassist.SkullOwners
 import com.github.unchama.seichiassist.data.ActiveSkillInventoryData
 import com.github.unchama.seichiassist.data.MenuInventoryData
-import com.github.unchama.seichiassist.data.descrptions.PlayerInformationDescriptions
+import com.github.unchama.seichiassist.data.descrptions.PlayerStatsLoreGenerator
 import com.github.unchama.seichiassist.menus.RegionMenu
 import com.github.unchama.seichiassist.menus.minestack.MineStackMainMenu
 import com.github.unchama.seichiassist.task.CoolDownTask
@@ -119,7 +120,7 @@ private object FirstPage: Menu {
       Button(
           iconItemStack,
           LeftClickButtonEffect(
-              FocusedSoundEffect(Sound.BLOCK_FENCE_GATE_OPEN, 1.0f, 0.1f),
+              CommonSoundEffects.menuTransitionFenceSound,
               // TODO メニューに置き換える
               TargetedEffect { it.openInventory(MenuInventoryData.getRankingList(0)) }
           )
@@ -136,7 +137,7 @@ private object FirstPage: Menu {
       Button(
           iconItemStack,
           LeftClickButtonEffect(
-              FocusedSoundEffect(Sound.BLOCK_FENCE_GATE_OPEN, 1.0f, 0.1f),
+              CommonSoundEffects.menuTransitionFenceSound,
               // TODO メニューに置き換える
               TargetedEffect { it.openInventory(MenuInventoryData.getRankingList_playtick(0)) }
           )
@@ -156,7 +157,7 @@ private object FirstPage: Menu {
       Button(
           iconItemStack,
           LeftClickButtonEffect(
-              FocusedSoundEffect(Sound.BLOCK_FENCE_GATE_OPEN, 1.0f, 0.1f),
+              CommonSoundEffects.menuTransitionFenceSound,
               // TODO メニューに置き換える
               TargetedEffect { it.openInventory(MenuInventoryData.getRankingList_p_vote(0)) }
           )
@@ -173,7 +174,7 @@ private object FirstPage: Menu {
       Button(
           iconItemStack,
           LeftClickButtonEffect(
-              FocusedSoundEffect(Sound.BLOCK_FENCE_GATE_OPEN, 1.0f, 0.1f),
+              CommonSoundEffects.menuTransitionFenceSound,
               StickMenu.secondPage.open
           )
       )
@@ -340,7 +341,7 @@ private object FirstPage: Menu {
       Button(
           iconItemStack,
           LeftClickButtonEffect(
-              FocusedSoundEffect(Sound.BLOCK_FENCE_GATE_OPEN, 1.0f, 0.1f),
+              CommonSoundEffects.menuTransitionFenceSound,
               // TODO メニューに置き換える
               TargetedEffect { it.openInventory(MenuInventoryData.getVotingMenuData(it)) }
           )
@@ -355,13 +356,13 @@ private object FirstPage: Menu {
       Button(
           SkullItemStackBuilder(uniqueId)
               .title("$YELLOW$BOLD$UNDERLINE${name}の統計データ")
-              .lore(PlayerInformationDescriptions.playerInfoLore(openerData))
+              .lore(PlayerStatsLoreGenerator(openerData).computeLore())
               .build(),
           FilteredButtonEffect(ClickEventFilter.LEFT_CLICK) {
             sequentialEffect(
                 openerData.toggleExpBarVisibility,
                 deferredEffect {
-                  val toggleSoundPitch = if (openerData.expbar.isVisible) 1.0f else 0.5f
+                  val toggleSoundPitch = if (openerData.settings.isExpBarVisible) 1.0f else 0.5f
                   FocusedSoundEffect(Sound.BLOCK_STONE_BUTTON_CLICK_ON, 1f, toggleSoundPitch)
                 }
             )
@@ -374,8 +375,8 @@ private object FirstPage: Menu {
 
       val buttonLore: List<String> = run {
         val toggleNavigation = listOf(
-            openerData.fastDiggingEffectSuppressor.currentStatus(),
-            "$RESET$DARK_RED${UNDERLINE}クリックで" + openerData.fastDiggingEffectSuppressor.nextToggledStatus()
+            openerData.settings.fastDiggingEffectSuppression.currentStatus(),
+            "$RESET$DARK_RED${UNDERLINE}クリックで" + openerData.settings.fastDiggingEffectSuppression.nextToggledStatus()
         )
 
         val explanation = listOf(
@@ -401,7 +402,7 @@ private object FirstPage: Menu {
           FilteredButtonEffect(ClickEventFilter.LEFT_CLICK) {
             sequentialEffect(
                 FocusedSoundEffect(Sound.BLOCK_STONE_BUTTON_CLICK_ON, 1f, 1f),
-                openerData.fastDiggingEffectSuppressor.suppressionDegreeToggleEffect,
+                openerData.settings.fastDiggingEffectSuppression.suppressionDegreeToggleEffect,
                 deferredEffect { openerData.computeFastDiggingEffect() }
             )
           }
@@ -494,7 +495,7 @@ private object FirstPage: Menu {
         )
         val loreHeading = if (playerData.level >= minimumRequiredLevel) {
           listOf(
-              "$RESET${GRAY}ポケットサイズ:${playerData.inventory.size}スタック",
+              "$RESET${GRAY}ポケットサイズ:${playerData.pocketInventory.size}スタック",
               "$RESET$DARK_GREEN${UNDERLINE}クリックで開く"
           )
         } else {
@@ -514,7 +515,7 @@ private object FirstPage: Menu {
                 if (playerData.level >= minimumRequiredLevel) {
                   sequentialEffect(
                     FocusedSoundEffect(Sound.BLOCK_ENDERCHEST_OPEN, 1.0f, 0.1f),
-                    TargetedEffect { it.openInventory(playerData.inventory) }
+                    TargetedEffect { it.openInventory(playerData.pocketInventory) }
                   )
                 } else FocusedSoundEffect(Sound.BLOCK_GRASS_PLACE, 1.0f, 0.1f)
               }
@@ -571,7 +572,7 @@ private object FirstPage: Menu {
               "$RESET${GRAY}・各種謝礼として"
           )
 
-          val obtainableApologyItems = playerData.numofsorryforbug
+          val obtainableApologyItems = playerData.unclaimedApologyItems
           val currentStatus =
               if (obtainableApologyItems != 0)
                 "$RESET${AQUA}未獲得ガチャ券：${obtainableApologyItems}枚"
@@ -599,7 +600,7 @@ private object FirstPage: Menu {
                   sequentialEffect(
                       unfocusedEffect {
                         repeat(numberOfItemsToGive) { Util.addItemToPlayerSafely(this, itemToGive) }
-                        playerData.numofsorryforbug = 0
+                        playerData.unclaimedApologyItems = 0
                       },
                       FocusedSoundEffect(Sound.BLOCK_ANVIL_PLACE, 1.0f, 1.0f),
                       "${GREEN}運営チームから${numberOfItemsToGive}枚の${GOLD}ガチャ券${WHITE}を受け取りました".asMessageEffect()
@@ -615,12 +616,12 @@ private object FirstPage: Menu {
 
       val iconItemStack = run {
         val breakNumRequiredToNextStarLevel =
-            (playerData.starlevel_Break.toLong() + 1) * 87115000 - playerData.totalbreaknum
+            (playerData.starLevels.fromBreakAmount.toLong() + 1) * 87115000 - playerData.totalbreaknum
 
         val lore = listOf(
-            "$RESET$AQUA${BOLD}整地量：☆${playerData.starlevel_Break}",
+            "$RESET$AQUA${BOLD}整地量：☆${playerData.starLevels.fromBreakAmount}",
             "$RESET${AQUA}次の☆まで：あと$breakNumRequiredToNextStarLevel",
-            "$RESET$GREEN$UNDERLINE${BOLD}合計：☆${playerData.starlevel}"
+            "$RESET$GREEN$UNDERLINE${BOLD}合計：☆${playerData.starLevels.total()}"
         )
 
         IconItemStackBuilder(Material.GOLD_INGOT)
@@ -716,7 +717,7 @@ private object FirstPage: Menu {
       val iconItemStack = run {
         val lore = run {
           val settingsStatus =
-              if (playerData.gachaflag)
+              if (playerData.settings.receiveGachaTicketEveryMinute)
                 "$RESET${GREEN}毎分受け取ります"
               else
                 "$RESET${RED}後でまとめて受け取ります"
@@ -736,10 +737,10 @@ private object FirstPage: Menu {
           iconItemStack,
           LeftClickButtonEffect(
               unfocusedEffect {
-                playerData.gachaflag = !playerData.gachaflag
+                playerData.settings.receiveGachaTicketEveryMinute = !playerData.settings.receiveGachaTicketEveryMinute
               },
               deferredEffect {
-                if (playerData.gachaflag) {
+                if (playerData.settings.receiveGachaTicketEveryMinute) {
                   sequentialEffect(
                       "${ChatColor.GREEN}毎分のガチャ券受け取り:ON".asMessageEffect(),
                       FocusedSoundEffect(Sound.BLOCK_STONE_BUTTON_CLICK_ON, 1.0f, 1.0f)
