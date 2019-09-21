@@ -44,8 +44,6 @@ class PlayerData constructor(
     @Deprecated("PlayerDataはuuidに依存するべきではない") val uuid: UUID,
     val name: String
 ) {
-  //読み込み済みフラグ
-  var loaded = false
 
   val settings = PlayerSettings()
 
@@ -111,7 +109,7 @@ class PlayerData constructor(
   //現在座標
   var loc: Location? = null
 
-  val mebius: MebiusTask = MebiusTask(this)
+  val mebius: MebiusTask by lazy { MebiusTask(uuid) }
 
   //放置時間
   var idleMinute = 0
@@ -180,7 +178,7 @@ class PlayerData constructor(
   //二つ名配布予約NOの保存
   var giveachvNo = 0
   //実績ポイント用
-  var achievePoint = AchievementPoint(cumulativeTotal = 0, used = 0, conversionCount = 0)
+  var achievePoint = AchievementPoint(fromUnlockedAchievements = 0, used = 0, conversionCount = 0)
 
   var buildCount = BuildCount(1, BigDecimal.ZERO, 0)
   // 1周年記念
@@ -306,6 +304,10 @@ class PlayerData constructor(
     halfhourblock.before = totalbreaknum
     updateLevel()
 
+    // TODO statisticsDataは別の箇所に持たれるべき
+    // statisticsDataを初期化する
+    run { statisticsData }
+
     if (unclaimedApologyItems > 0) {
       player.playSound(player.location, Sound.BLOCK_ANVIL_PLACE, 1f, 1f)
       player.sendMessage("${GREEN}運営チームから${unclaimedApologyItems}枚の${GOLD}ガチャ券${WHITE}が届いています！\n木の棒メニューから受け取ってください")
@@ -331,8 +333,12 @@ class PlayerData constructor(
 
     activeskilldata.updateOnQuit()
 
+    mebius.cancel()
+
     //クライアント経験値をサーバー保管
     saveTotalExp()
+
+    activeskilldata.RemoveAllTask()
   }
 
   fun giganticBerserkLevelUp() {
@@ -345,7 +351,7 @@ class PlayerData constructor(
         .stream() // index
         .filter { it in 1000..9799 }
         .count().toInt() /* Safe Conversation: BitSet indexes -> Int */ * 10
-    achievePoint = achievePoint.copy(cumulativeTotal = max)
+    achievePoint = achievePoint.copy(fromUnlockedAchievements = max)
   }
 
   fun consumeAchievePoint(amount: Int) {
@@ -385,7 +391,7 @@ class PlayerData constructor(
 
   //表示される名前に整地レベルor二つ名を追加
   fun setDisplayName() {
-    var displayname = Util.getName(player)
+    var displayname = player.name
     //放置時に色を変える
     val idleColor = when {
       idleMinute >= 10 -> DARK_GRAY
@@ -478,7 +484,7 @@ class PlayerData constructor(
     val newStars: Int = starLevels.total()
     //合計値の確認
     if (oldStars < newStars) {
-      player.sendMessage("$GOLD★☆★ｽﾀｰﾚﾍﾞﾙUP!!!★☆★【☆($oldStars)→☆($newStars)】")
+      player.sendMessage("$GOLD★☆★ﾑﾑｯwwwwwwwﾚﾍﾞﾙｱｯﾌﾟwwwwwww★☆★【Lv200(☆($oldStars))→Lv200(☆($newStars))】")
     }
   }
 
@@ -507,12 +513,14 @@ class PlayerData constructor(
       }
       statisticsData[i] = materialStatistics
     }
-    //double値を四捨五入し、整地量に追加する整数xを出す
-    val x = sum.roundToInt()
 
-    //xを整地量に追加
-    totalbreaknum += x
-    return x
+    return sum.roundToInt().also {
+      //整地量に追加
+      totalbreaknum += it
+
+      //ガチャポイントに合算
+      gachapoint += it
+    }
   }
 
   //ブロック別整地数反映量の調節
@@ -615,7 +623,7 @@ class PlayerData constructor(
   fun getSubHomeName(subHomeIndex: Int): String {
     val subHome = this.subHomeMap[subHomeIndex]
     val subHomeName = subHome?.name
-    return subHomeName ?: "サブホームポイント$subHomeIndex"
+    return subHomeName ?: "サブホームポイント${subHomeIndex + 1}"
   }
 
   private fun saveTotalExp() {
@@ -718,6 +726,7 @@ class PlayerData constructor(
 
   fun setVotingFairyTime(@AntiTypesafe str: String) {
     val s = str.split(",".toRegex()).toTypedArray()
+    if (s.size < 5) return
     if (s.slice(0..4).all(String::isNotEmpty)) {
       val year = s[0].toInt()
       val month = s[1].toInt() - 1

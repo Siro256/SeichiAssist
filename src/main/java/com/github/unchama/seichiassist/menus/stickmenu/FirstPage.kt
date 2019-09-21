@@ -47,6 +47,7 @@ private object FirstPage: Menu {
     val teleportServerButton = run {
       val buttonLore = listOf(
           "${GRAY}・各サバイバルサーバー",
+          "${GRAY}・建築サーバー",
           "${GRAY}・公共施設サーバー",
           "${GRAY}間を移動する時に使います",
           "$DARK_RED${UNDERLINE}クリックして開く"
@@ -112,7 +113,7 @@ private object FirstPage: Menu {
           IconItemStackBuilder(Material.COOKIE)
               .title("$YELLOW$UNDERLINE${BOLD}整地神ランキングを見る")
               .lore(listOf(
-                  "$RESET$RED(整地レベル100以上のプレイヤーのみ表記されます)",
+                  "$RESET$RED(整地神ランキング150位以内のプレイヤーのみ表記されます)",
                   "$RESET$DARK_RED${UNDERLINE}クリックで開く"
               ))
               .build()
@@ -131,7 +132,9 @@ private object FirstPage: Menu {
       val iconItemStack =
           IconItemStackBuilder(Material.COOKIE)
               .title("$YELLOW$UNDERLINE${BOLD}ログイン神ランキングを見る")
-              .lore(listOf("$RESET$DARK_RED${UNDERLINE}クリックで開く"))
+              .lore(listOf(
+                  "$RESET$RED(ログイン神ランキング150位以内のプレイヤーのみ表記されます)",
+                  "$RESET$DARK_RED${UNDERLINE}クリックで開く"))
               .build()
 
       Button(
@@ -149,7 +152,7 @@ private object FirstPage: Menu {
           IconItemStackBuilder(Material.COOKIE)
               .title("$YELLOW$UNDERLINE${BOLD}投票神ランキングを見る")
               .lore(listOf(
-                  "$RESET$RED(投票しているプレイヤーのみ表記されます)",
+                  "$RESET$RED(投票神ランキング150位以内のプレイヤーのみ表記されます)",
                   "$RESET$DARK_RED${UNDERLINE}クリックで開く"
               ))
               .build()
@@ -388,7 +391,7 @@ private object FirstPage: Menu {
 
         val effectStats =
             listOf("$RESET$YELLOW${UNDERLINE}上昇量の内訳") +
-                openerData.effectdatalist.map { it.effectDescription }
+                openerData.effectdatalist.map { "$RESET$RED${it.effectDescription}" }
 
         toggleNavigation + explanation + effectStats
       }
@@ -638,13 +641,13 @@ private object FirstPage: Menu {
         val lore =
             if (Util.isSkillEnable(this))
               listOf(
-                  "$RESET${RED}このワールドでは",
-                  "$RESET${RED}整地スキルを使えません"
+                  "$RESET${GRAY}整地に便利なスキルを使用できるゾ",
+                  "$RESET$DARK_RED${UNDERLINE}クリックでスキル一覧を開く"
               )
             else
               listOf(
-                  "$RESET${GRAY}整地に便利なスキルを使用できるゾ",
-                  "$RESET$DARK_RED${UNDERLINE}クリックでスキル一覧を開く"
+                  "$RESET${RED}このワールドでは",
+                  "$RESET${RED}整地スキルを使えません"
               )
 
         IconItemStackBuilder(Material.ENCHANTED_BOOK)
@@ -657,6 +660,7 @@ private object FirstPage: Menu {
       return Button(
           iconItemStack,
           LeftClickButtonEffect(
+              FocusedSoundEffect(Sound.BLOCK_ENCHANTMENT_TABLE_USE, 1.0f, 0.8f),
               // TODO メニューに置き換える
               TargetedEffect { it.openInventory(ActiveSkillInventoryData.getActiveSkillMenuData(it)) }
           )
@@ -698,14 +702,16 @@ private object FirstPage: Menu {
 
               val itemStackToGive = Util.getskull(this@computeGachaTicketButton.name)
 
-              sequentialEffect(
-                  unfocusedEffect {
-                    playerData.gachapoint -= gachaPointPerTicket * gachaTicketsToGive
-                    repeat(gachaTicketsToGive) { Util.addItemToPlayerSafely(this@computeGachaTicketButton, itemStackToGive) }
-                  },
-                  "${ChatColor.GOLD}ガチャ券${gachaTicketsToGive}枚${ChatColor.WHITE}プレゼントフォーユー".asMessageEffect(),
-                  FocusedSoundEffect(Sound.BLOCK_ANVIL_PLACE, 1.0f, 1.0f)
-              )
+              if (gachaTicketsToGive > 0) {
+                sequentialEffect(
+                    unfocusedEffect {
+                      playerData.gachapoint -= gachaPointPerTicket * gachaTicketsToGive
+                      repeat(gachaTicketsToGive) { Util.addItemToPlayerSafely(this@computeGachaTicketButton, itemStackToGive) }
+                    },
+                    "${ChatColor.GOLD}ガチャ券${gachaTicketsToGive}枚${ChatColor.WHITE}プレゼントフォーユー".asMessageEffect(),
+                    FocusedSoundEffect(Sound.BLOCK_ANVIL_PLACE, 1.0f, 1.0f)
+                )
+              } else EmptyEffect
             } else EmptyEffect
           }
       )

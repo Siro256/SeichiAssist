@@ -26,7 +26,7 @@ public class LimitedLoginEvent {
 
 //	private JavaPlugin instance;
 
-//	public void BlockLineUp(JavaPlugin instance) {
+//	public void BlockFill(JavaPlugin instance) {
 //		this.instance = instance;
 //		instance.getServer().getPluginManager().registerEvents(this, instance);
 //	}
@@ -41,7 +41,7 @@ public class LimitedLoginEvent {
 		player = p;
 		UUID uuid = p.getUniqueId();
 		playerdata = playermap.get(uuid);
-		ItemStack skull = Util.INSTANCE.getskull(Util.INSTANCE.getName(player));
+		ItemStack skull = Util.INSTANCE.getskull(player.getName());
 		Calendar cal = Calendar.getInstance();
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd");
 

@@ -7,6 +7,8 @@ import com.github.unchama.seichiassist.data.LimitedLoginEvent
 import com.github.unchama.seichiassist.data.player.PlayerData
 import com.github.unchama.seichiassist.isSeichi
 import com.github.unchama.seichiassist.util.Util
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 import net.coreprotect.model.Config
 import net.md_5.bungee.api.ChatColor
 import org.bukkit.Material
@@ -24,20 +26,37 @@ class PlayerJoinListener : Listener {
   private val playerMap: HashMap<UUID, PlayerData> = SeichiAssist.playermap
   private val databaseGateway = SeichiAssist.databaseGateway
 
+  private fun loadPlayerData(playerUuid: UUID, playerName: String) {
+    SeichiAssist.playermap[playerUuid] =
+        databaseGateway.playerDataManipulator.loadPlayerData(playerUuid, playerName)
+  }
+
+  private val failedToLoadDataError =
+      "プレーヤーデータの読み込みに失敗しました。再接続しても読み込まれない場合管理者に連絡してください。"
+
   @EventHandler
   fun onPlayerPreLoginEvent(event: AsyncPlayerPreLoginEvent) {
-    val playerUuid = event.uniqueId
-    val playerName = event.name
+    val maxTryCount = 10
+    runBlocking {
+      (1 until maxTryCount + 1).forEach { tryCount ->
+        val isLastTry = tryCount == maxTryCount
 
-    try {
-      val playerData = databaseGateway.playerDataManipulator.loadPlayerData(playerUuid, playerName)
-      SeichiAssist.playermap[playerUuid] = playerData
-    } catch (e: Exception) {
-      println("Caught exception while loading PlayerData.")
-      e.printStackTrace()
+        try {
+          loadPlayerData(event.uniqueId, event.name)
+          return@runBlocking
+        } catch (e: Exception) {
+          if (isLastTry) {
+            println("Caught exception while loading PlayerData.")
+            e.printStackTrace()
 
-      event.kickMessage = "プレーヤーデータの読み込みに失敗しました。管理者に連絡してください。"
-      event.loginResult = AsyncPlayerPreLoginEvent.Result.KICK_OTHER
+            event.kickMessage = failedToLoadDataError
+            event.loginResult = AsyncPlayerPreLoginEvent.Result.KICK_OTHER
+            return@runBlocking
+          }
+        }
+
+        delay(600)
+      }
     }
   }
 
@@ -45,6 +64,22 @@ class PlayerJoinListener : Listener {
   @EventHandler
   fun onPlayerJoinEvent(event: PlayerJoinEvent) {
     val player: Player = event.player
+
+    /*
+      サーバー起動してからワールドが読み込まれる前に接続試行をするとAsyncPlayerPreLoginEventが発火されないことがあり、
+      そういった場合ではPlayerDataが読み込まれないままここに到達するため、読み込み試行をしてだめだったらキックする。
+     */
+    if (!playerMap.containsKey(player.uniqueId)) {
+      try {
+        loadPlayerData(player.uniqueId, player.name)
+      } catch (e: Exception) {
+        println("Caught exception while loading PlayerData.")
+        e.printStackTrace()
+
+        player.kickPlayer(failedToLoadDataError)
+        return
+      }
+    }
 
     run {
       val limitedLoginEvent = LimitedLoginEvent()

@@ -17,12 +17,12 @@ import com.github.unchama.seichiassist.minestack.MineStackObjectCategory
 import com.github.unchama.seichiassist.task.HalfHourRankingRoutine
 import com.github.unchama.seichiassist.task.PlayerDataBackupTask
 import com.github.unchama.seichiassist.task.PlayerDataPeriodicRecalculation
-import com.github.unchama.seichiassist.task.PlayerDataSaveTask
-import com.github.unchama.seichiassist.util.Util
+import com.github.unchama.seichiassist.task.savePlayerData
 import com.github.unchama.util.ActionStatus.Fail
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.bukkit.Bukkit
 import org.bukkit.ChatColor.GREEN
 import org.bukkit.ChatColor.RED
@@ -69,31 +69,37 @@ class SeichiAssist : JavaPlugin() {
       logger.info("${GREEN}config.ymlの設定値を書き換えて再起動してください")
     }
 
-    databaseGateway = DatabaseGateway.createInitializedInstance(
-        seichiAssistConfig.url, seichiAssistConfig.db, seichiAssistConfig.id, seichiAssistConfig.pw
-    )
+    try {
+      databaseGateway = DatabaseGateway.createInitializedInstance(
+          seichiAssistConfig.url, seichiAssistConfig.db, seichiAssistConfig.id, seichiAssistConfig.pw
+      )
+    } catch (e: Exception) {
+      e.printStackTrace()
+      logger.severe("データベース初期化に失敗しました。サーバーを停止します…")
+      Bukkit.shutdown()
+    }
 
     //mysqlからガチャデータ読み込み
     if (!databaseGateway.gachaDataManipulator.loadGachaData()) {
-      logger.info("ガチャデータのロードに失敗しました")
+      logger.severe("ガチャデータのロードに失敗しました")
       Bukkit.shutdown()
     }
 
     //mysqlからMineStack用ガチャデータ読み込み
     if (!databaseGateway.mineStackGachaDataManipulator.loadMineStackGachaData()) {
-      logger.info("MineStack用ガチャデータのロードに失敗しました")
+      logger.severe("MineStack用ガチャデータのロードに失敗しました")
       Bukkit.shutdown()
     }
 
-    MineStackObjectList.minestacklistgacha.addAll(creategachaminestacklist())
+    MineStackObjectList.minestackGachaPrizes.addAll(generateGachaPrizes())
 
-    MineStackObjectList.minestacklist = ArrayList()
-    MineStackObjectList.minestacklist!!.addAll(MineStackObjectList.minestacklistmine)
-    MineStackObjectList.minestacklist!!.addAll(MineStackObjectList.minestacklistdrop)
-    MineStackObjectList.minestacklist!!.addAll(MineStackObjectList.minestacklistfarm)
-    MineStackObjectList.minestacklist!!.addAll(MineStackObjectList.minestacklistbuild)
-    MineStackObjectList.minestacklist!!.addAll(MineStackObjectList.minestacklistrs)
-    MineStackObjectList.minestacklist!!.addAll(MineStackObjectList.minestacklistgacha)
+    MineStackObjectList.minestacklist.clear()
+    MineStackObjectList.minestacklist += MineStackObjectList.minestacklistmine
+    MineStackObjectList.minestacklist += MineStackObjectList.minestacklistdrop
+    MineStackObjectList.minestacklist += MineStackObjectList.minestacklistfarm
+    MineStackObjectList.minestacklist += MineStackObjectList.minestacklistbuild
+    MineStackObjectList.minestacklist += MineStackObjectList.minestacklistrs
+    MineStackObjectList.minestacklist += MineStackObjectList.minestackGachaPrizes
 
     // コマンドの登録
     mapOf(
@@ -142,8 +148,13 @@ class SeichiAssist : JavaPlugin() {
 
     //オンラインの全てのプレイヤーを処理
     for (p in server.onlinePlayers) {
-      //プレイヤーデータを生成
-      playermap[p.uniqueId] = databaseGateway.playerDataManipulator.loadPlayerData(p.uniqueId, p.name)
+      try {
+        //プレイヤーデータを生成
+        playermap[p.uniqueId] = databaseGateway.playerDataManipulator.loadPlayerData(p.uniqueId, p.name)
+      } catch (e: Exception) {
+        e.printStackTrace()
+        p.kickPlayer("プレーヤーデータの読み込みに失敗しました。")
+      }
     }
 
     //ランキングリストを最新情報に更新する
@@ -179,13 +190,15 @@ class SeichiAssist : JavaPlugin() {
       if (playerdata == null) {
         p.sendMessage(RED.toString() + "playerdataの保存に失敗しました。管理者に報告してください")
         server.consoleSender.sendMessage(RED.toString() + "SeichiAssist[Ondisable処理]でエラー発生")
-        logger.warning(Util.getName(p) + "のplayerdataの保存失敗。開発者に報告してください")
+        logger.warning(p.name + "のplayerdataの保存失敗。開発者に報告してください")
         continue
       }
       //quit時とondisable時、プレイヤーデータを最新の状態に更新
       playerdata.updateOnQuit()
 
-      PlayerDataSaveTask(playerdata, true, true).run()
+      runBlocking {
+        savePlayerData(playerdata)
+      }
     }
 
     if (databaseGateway.disconnect() === Fail) {
@@ -197,8 +210,8 @@ class SeichiAssist : JavaPlugin() {
     buildAssist.onDisable()
   }
 
-  override fun onCommand(sender: CommandSender?, command: Command?, label: String?, args: Array<out String>?)
-      = buildAssist.onCommand(sender, command, label, args)
+  override fun onCommand(sender: CommandSender?, command: Command?, label: String?, args: Array<String>?)
+      = buildAssist.onCommand(sender!!, command!!, label!!, args!!)
 
   private fun startRepeatedJobs() {
     repeatedJobCoroutine = CoroutineScope(Schedulers.sync).launch {
@@ -260,9 +273,9 @@ class SeichiAssist : JavaPlugin() {
     val ranklist_premiumeffectpoint: MutableList<RankData> = ArrayList()
 
     //総採掘量表示用
-    var allplayerbreakblockint: Long = 0
+    var allplayerbreakblockint = 0L
 
-    var allplayergiveapplelong: Long = 0
+    var allplayergiveapplelong = 0L
 
     //プラグインで出すエンティティの保存
     val entitylist: MutableList<Entity> = ArrayList()
@@ -270,12 +283,12 @@ class SeichiAssist : JavaPlugin() {
     //プレイヤーがスキルで破壊するブロックリスト
     val allblocklist: MutableList<Block> = LinkedList()
 
-    private fun creategachaminestacklist(): List<MineStackObj> {
+    private fun generateGachaPrizes(): List<MineStackObj> {
       val minestacklist = ArrayList<MineStackObj>()
       for (i in msgachadatalist.indices) {
         val g = msgachadatalist[i]
         if (g.itemStack.type !== Material.EXP_BOTTLE) { //経験値瓶だけはすでにリストにあるので除外
-          minestacklist.add(MineStackObj(g.objName, g.level, g.itemStack, true, i, MineStackObjectCategory.GACHA_PRIZES))
+          minestacklist += MineStackObj(g.objName, null, g.level, g.itemStack, true, i, MineStackObjectCategory.GACHA_PRIZES)
         }
       }
       return minestacklist
