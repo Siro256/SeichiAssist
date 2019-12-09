@@ -1,40 +1,29 @@
 import org.apache.tools.ant.filters.ReplaceTokens
-import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSet
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.net.URI
 
 plugins {
     java
+    scala
     maven
-    kotlin("jvm").version("1.3.40")
-    id("nebula.dependency-lock").version("2.2.4")
-    id("org.jetbrains.kotlin.kapt").version("1.3.40")
 }
 
 group = "click.seichi"
-version = "1.1.4"
+version = "1.2.4"
 description = """ギガンティック☆整地鯖の独自要素を司るプラグイン"""
 
 project.sourceSets {
     getByName("main") {
         java.srcDir("src/main/java")
-
-        withConvention(KotlinSourceSet::class) {
-            kotlin.srcDir("src/main/java")
-        }
     }
     getByName("test") {
         java.srcDir("src/test/java")
-
-        withConvention(KotlinSourceSet::class) {
-            kotlin.srcDir("src/test/java")
-        }
     }
 }
 
 repositories {
     maven { url = URI("https://jitpack.io") }
     maven { url = URI("http://maven.sk89q.com/repo/") }
+    maven { url = URI("http://maven.playpro.com") }
     maven { url = URI("http://repo.spring.io/plugins-release/") }
     maven { url = URI("https://repo.spongepowered.org/maven") }
     maven { url = URI("https://repo.maven.apache.org/maven2") }
@@ -59,6 +48,9 @@ dependencies {
 
     implementation("org.spigotmc:spigot-api:1.12.2-R0.1-SNAPSHOT")
 
+    implementation("com.sk89q.worldguard:worldguard-legacy:6.2")
+    implementation("net.coreprotect:coreprotect:2.14.2")
+
     implementation("org.apache.commons:commons-lang3:3.9")
 
     implementation("commons-codec:commons-codec:1.12")
@@ -68,24 +60,23 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter-engine:5.4.2")
 
     embed("org.flywaydb:flyway-core:5.2.4")
-    embed(kotlin("stdlib-jdk8"))
-    embed("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.2.1")
 
-    embed("com.okkero.skedule:skedule:1.2.6")
+    embed("org.scala-lang:scala-library:2.13.1")
 
-    // arrow依存
-    val arrowVersion = "0.9.0"
-    embed("io.arrow-kt:arrow-core-data:$arrowVersion")
-    embed("io.arrow-kt:arrow-core-extensions:$arrowVersion")
-    embed("io.arrow-kt:arrow-syntax:$arrowVersion")
-    embed("io.arrow-kt:arrow-typeclasses:$arrowVersion")
-    embed("io.arrow-kt:arrow-extras-data:$arrowVersion")
-    embed("io.arrow-kt:arrow-extras-extensions:$arrowVersion")
-    kapt("io.arrow-kt:arrow-meta:$arrowVersion")
+    // cats依存
+    embed("org.typelevel:cats-core_2.13:2.0.0")
+    embed("org.typelevel:cats-effect_2.13:2.0.0")
 
-    embed("io.arrow-kt:arrow-effects-data:$arrowVersion")
-    embed("io.arrow-kt:arrow-effects-extensions:$arrowVersion")
-    embed("io.arrow-kt:arrow-effects-io-extensions:$arrowVersion")
+    embed("eu.timepit:refined_2.13:0.9.10")
+
+    embed("com.beachape:enumeratum_2.13:1.5.13")
+}
+
+task("repl", JavaExec::class) {
+    main = "scala.tools.nsc.MainGenericRunner"
+    classpath = sourceSets.main.get().runtimeClasspath
+    standardInput = System.`in`
+    args = listOf("-usejavacp")
 }
 
 tasks.processResources {
@@ -108,28 +99,23 @@ tasks.withType(JavaCompile::class.java).all {
     this.options.encoding = "UTF-8"
 }
 
+tasks.withType(ScalaCompile::class.java).all {
+    this.scalaCompileOptions.additionalParameters = listOf(
+        "-Ypatmat-exhaust-depth", "40"
+    )
+    this.scalaCompileOptions.forkOptions.jvmArgs = listOf("-Xss64m")
+    this.options.encoding = "UTF-8"
+
+    val compilerArgument = listOf(
+        "-Xlint:unchecked",
+        "-Xlint:deprecation"
+    )
+    this.options.compilerArgs.addAll(compilerArgument)
+}
+
 tasks.jar {
     // Configurationをコピーしないと変更を行っているとみなされて怒られる
     val embedConfiguration = embed.copy()
 
     from(embedConfiguration.map { if (it.isDirectory) it else zipTree(it) })
 }
-
-val compilerArgument = listOf("-Xlint:unchecked", "-Xlint:deprecation")
-val kotlinCompilerArgument = listOf("-Xjsr305=strict")
-
-val compileKotlin: KotlinCompile by tasks
-compileKotlin.kotlinOptions {
-    jvmTarget = "1.8"
-    freeCompilerArgs = compilerArgument + kotlinCompilerArgument
-}
-
-val compileTestKotlin: KotlinCompile by tasks
-compileTestKotlin.kotlinOptions {
-    jvmTarget = "1.8"
-    freeCompilerArgs = compilerArgument + kotlinCompilerArgument
-}
-
-val compileJava: JavaCompile by tasks
-compileJava.options.compilerArgs.addAll(compilerArgument)
-
