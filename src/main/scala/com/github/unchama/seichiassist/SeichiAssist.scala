@@ -5,8 +5,11 @@ import java.util.UUID
 import cats.effect.{Fiber, IO}
 import com.github.unchama.buildassist.BuildAssist
 import com.github.unchama.chatinterceptor.{ChatInterceptor, InterceptionScope}
-import com.github.unchama.concurrent.RepeatingTask
+import com.github.unchama.generic.effect.ResourceScope
+import com.github.unchama.generic.effect.ResourceScope.SingleResourceScope
 import com.github.unchama.menuinventory.MenuHandler
+import com.github.unchama.playerdatarepository.{NonPersistentPlayerDataRefRepository, TryableFiberRepository}
+import com.github.unchama.seichiassist.MaterialSets.BlockBreakableBySkill
 import com.github.unchama.seichiassist.bungee.BungeeReceiver
 import com.github.unchama.seichiassist.commands._
 import com.github.unchama.seichiassist.commands.legacy.GachaCommand
@@ -18,10 +21,9 @@ import com.github.unchama.seichiassist.listener._
 import com.github.unchama.seichiassist.listener.new_year_event.NewYearsEvent
 import com.github.unchama.seichiassist.minestack.{MineStackObj, MineStackObjectCategory}
 import com.github.unchama.seichiassist.task.PlayerDataSaveTask
-import com.github.unchama.seichiassist.task.repeating.{HalfHourRankingRoutine, PlayerDataBackupTask, PlayerDataPeriodicRecalculation}
+import com.github.unchama.seichiassist.task.global.{HalfHourRankingRoutine, PlayerDataBackupRoutine, PlayerDataRecalculationRoutine}
 import com.github.unchama.util.ActionStatus
 import org.bukkit.ChatColor._
-import org.bukkit.block.Block
 import org.bukkit.command.{Command, CommandSender}
 import org.bukkit.entity.Entity
 import org.bukkit.plugin.java.JavaPlugin
@@ -35,6 +37,31 @@ class SeichiAssist extends JavaPlugin() {
 
   val expBarSynchronization = new ExpBarSynchronization()
   private var repeatedTaskFiber: Option[Fiber[IO, List[Nothing]]] = None
+
+  val arrowSkillProjectileScope: ResourceScope[IO, Entity] = {
+    import PluginExecutionContexts.asyncShift
+    ResourceScope.unsafeCreate
+  }
+  val magicEffectEntityScope: SingleResourceScope[IO, Entity] = {
+    import PluginExecutionContexts.asyncShift
+    ResourceScope.unsafeCreateSingletonScope
+  }
+
+  /**
+   * スキル使用などで破壊されることが確定したブロック塊のスコープ
+   */
+  val lockedBlockChunkScope: ResourceScope[IO, Set[BlockBreakableBySkill]] = {
+    import PluginExecutionContexts.asyncShift
+    ResourceScope.unsafeCreate
+  }
+
+  val activeSkillAvailability: NonPersistentPlayerDataRefRepository[Boolean] =
+    new NonPersistentPlayerDataRefRepository(true)
+
+  val assaultSkillRoutines: TryableFiberRepository = {
+    import PluginExecutionContexts.asyncShift
+    new TryableFiberRepository()
+  }
 
   override def onEnable(): Unit = {
     val logger = getLogger
@@ -125,9 +152,14 @@ class SeichiAssist extends JavaPlugin() {
       case (commandName, executor) => getCommand(commandName).setExecutor(executor)
     }
 
+    val repositories = Seq(
+      activeSkillAvailability,
+      assaultSkillRoutines
+    )
+
     import PluginExecutionContexts.asyncShift
     //リスナーの登録
-    List(
+    Seq(
       new PlayerJoinListener(),
       new PlayerQuitListener(),
       new PlayerClickListener(),
@@ -142,9 +174,11 @@ class SeichiAssist extends JavaPlugin() {
       new WorldRegenListener(),
       new ChatInterceptor(List(globalChatInterceptionScope)),
       new MenuHandler()
-    ).foreach {
-      getServer.getPluginManager.registerEvents(_, this)
-    }
+    )
+      .concat(repositories)
+      .foreach {
+        getServer.getPluginManager.registerEvents(_, this)
+      }
 
     //正月イベント用
     new NewYearsEvent(this)
@@ -181,19 +215,20 @@ class SeichiAssist extends JavaPlugin() {
       import PluginExecutionContexts._
       import cats.implicits._
 
-      // 公共鯖なら整地量のランキングを表示する必要はない
-      val programs: List[RepeatingTask] =
+      // 公共鯖(7)と建築鯖(8)なら整地量のランキングを表示する必要はない
+      val programs: List[IO[Nothing]] =
         List(
-          new PlayerDataPeriodicRecalculation,
-          new PlayerDataBackupTask
+          PlayerDataRecalculationRoutine(),
+          PlayerDataBackupRoutine()
         ) ++
           Option.unless(
             SeichiAssist.seichiAssistConfig.getServerNum == 7
+            || SeichiAssist.seichiAssistConfig.getServerNum == 8
           )(
-            new HalfHourRankingRoutine
+            HalfHourRankingRoutine()
           ).toList
 
-      programs.map(_.launch).parSequence.start
+      programs.parSequence.start
     }
 
     repeatedTaskFiber = Some(startTask.unsafeRunSync())
@@ -204,13 +239,14 @@ class SeichiAssist extends JavaPlugin() {
 
     cancelRepeatedJobs()
 
-    //全てのエンティティを削除
-    SeichiAssist.managedEntities.foreach {
-      _.remove()
-    }
+    // 管理下にある資源を開放する
 
-    //全てのスキルで破壊されるブロックを強制破壊
-    SeichiAssist.managedBlocks.foreach(_.setType(Material.AIR))
+    // ファイナライザはunsafeRunSyncによってこのスレッドで同期的に実行されるため
+    // onDisable内で呼び出して問題はない。
+    // https://scastie.scala-lang.org/NqT4BFw0TiyfjycWvzRIuQ
+    lockedBlockChunkScope.releaseAll.unsafeRunSync()
+    arrowSkillProjectileScope.releaseAll.unsafeRunSync()
+    magicEffectEntityScope.releaseAll.value.unsafeRunSync()
 
     //sqlコネクションチェック
     SeichiAssist.databaseGateway.ensureConnection()
@@ -272,14 +308,6 @@ object SeichiAssist {
   val ranklist_p_vote: mutable.ArrayBuffer[RankData] = mutable.ArrayBuffer()
   //マナ妖精表示用のデータリスト
   val ranklist_p_apple: mutable.ArrayBuffer[RankData] = mutable.ArrayBuffer()
-  //プレミアムエフェクトポイント表示用データリスト
-  val ranklist_premiumeffectpoint: mutable.ArrayBuffer[RankData] = mutable.ArrayBuffer()
-
-  //プラグインで出すエンティティの保存
-  val managedEntities: mutable.HashSet[Entity] = mutable.HashSet()
-
-  //プレイヤーがスキルで破壊するブロックリスト
-  val managedBlocks: mutable.HashSet[Block] = mutable.HashSet()
 
   var instance: SeichiAssist = _
   //デバッグフラグ(デバッグモード使用時はここで変更するのではなくconfig.ymlの設定値を変更すること！)
@@ -304,14 +332,12 @@ object SeichiAssist {
     }
   }
 
-  private def generateGachaPrizes(): List[MineStackObj] = {
-    val minestacklist = mutable.ArrayBuffer[MineStackObj]()
-    for (i <- msgachadatalist.indices) {
-      val g = msgachadatalist(i)
-      if (g.itemStack.getType != Material.EXP_BOTTLE) { //経験値瓶だけはすでにリストにあるので除外
-        minestacklist += new MineStackObj(g.objName, None, g.level, g.itemStack, true, i, MineStackObjectCategory.GACHA_PRIZES)
+  private def generateGachaPrizes(): List[MineStackObj] =
+    msgachadatalist
+      .toList
+      .zipWithIndex
+      .filter(_._1.itemStack.getType != Material.EXP_BOTTLE) //経験値瓶だけはすでにリストにあるので除外
+      .map { case (g, i) =>
+        new MineStackObj(g.objName, None, g.level, g.itemStack, true, i, MineStackObjectCategory.GACHA_PRIZES)
       }
-    }
-    minestacklist.toList
-  }
 }
